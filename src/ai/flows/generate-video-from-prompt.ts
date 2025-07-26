@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * @fileOverview Generates a video from a text prompt using the Veo3 API.
+ * @fileOverview Generates a video from a text prompt using the Veo API.
  *
  * - generateVideoFromPrompt - A function that handles the video generation process.
  * - GenerateVideoFromPromptInput - The input type for the generateVideoFromPrompt function.
@@ -11,8 +11,9 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
-import * as fs from 'fs';
-import { Readable } from 'stream';
+import { MediaPart } from 'genkit/media';
+
+const MAX_RETRIES = 3;
 
 const GenerateVideoFromPromptInputSchema = z.object({
   prompt: z.string().describe('The text prompt to use for video generation.'),
@@ -34,65 +35,85 @@ const generateVideoFromPromptFlow = ai.defineFlow(
     inputSchema: GenerateVideoFromPromptInputSchema,
     outputSchema: GenerateVideoFromPromptOutputSchema,
   },
-  async input => {
-    let { operation } = await ai.generate({
-      model: googleAI.model('veo-2.0-generate-001'),
-      prompt: input.prompt,
-      config: {
-        durationSeconds: 5,
-        aspectRatio: '16:9',
-      },
-    });
+  async (input, streamingCallback) => {
+    let lastError: Error | null = null;
+    for (let i = 0; i < MAX_RETRIES; i++) {
+        try {
+            if (i > 0) {
+                streamingCallback({
+                    index: i,
+                    step: 'retry',
+                    retryCount: i,
+                    totalRetries: MAX_RETRIES,
+                });
+            }
 
-    if (!operation) {
-      throw new Error('Expected the model to return an operation');
+            let { operation } = await ai.generate({
+                model: googleAI.model('veo-2.0-generate-001'),
+                prompt: input.prompt,
+                config: {
+                    durationSeconds: 5,
+                    aspectRatio: '16:9',
+                },
+            });
+
+            if (!operation) {
+                throw new Error('Expected the model to return an operation');
+            }
+            
+            streamingCallback({
+                index: i,
+                step: 'polling',
+            });
+
+            // Wait until the operation completes. Note that this may take some time, maybe even up to a minute. Design the UI accordingly.
+            while (!operation.done) {
+                operation = await ai.checkOperation(operation);
+                // Sleep for 5 seconds before checking again.
+                await new Promise((resolve) => setTimeout(resolve, 5000));
+            }
+
+            if (operation.error) {
+                throw new Error('failed to generate video: ' + operation.error.message);
+            }
+
+            const video = operation.output?.message?.content.find((p) => !!p.media);
+            if (!video) {
+                throw new Error('Failed to find the generated video');
+            }
+            
+            streamingCallback({
+                index: i,
+                step: 'downloading',
+            });
+            const videoDataUri = await convertVideoToDataUri(video);
+
+            return { videoDataUri };
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+            console.error(`Attempt ${i+1} failed:`, lastError.message);
+        }
     }
-
-    // Wait until the operation completes. Note that this may take some time, maybe even up to a minute. Design the UI accordingly.
-    while (!operation.done) {
-      operation = await ai.checkOperation(operation);
-      // Sleep for 5 seconds before checking again.
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-    }
-
-    if (operation.error) {
-      throw new Error('failed to generate video: ' + operation.error.message);
-    }
-
-    const video = operation.output?.message?.content.find((p) => !!p.media);
-    if (!video) {
-      throw new Error('Failed to find the generated video');
-    }
-
-    const videoPath = 'output.mp4';
-    await downloadVideo(video, videoPath);
-
-    // Read the video file and convert it to a data URI.
-    const videoData = fs.readFileSync(videoPath);
-    const videoBase64 = videoData.toString('base64');
-    const videoDataUri = `data:video/mp4;base64,${videoBase64}`;
-
-    // Delete the temporary video file.
-    fs.unlinkSync(videoPath);
-
-    return { videoDataUri };
+    throw new Error(`Video generation failed after ${MAX_RETRIES} attempts. Last error: ${lastError?.message}`);
   }
 );
 
-async function downloadVideo(video: any, path: string) {
-  const fetch = (await import('node-fetch')).default;
+async function convertVideoToDataUri(video: MediaPart): Promise<string> {
+    const fetch = (await import('node-fetch')).default;
     // Add API key before fetching the video.
-  const videoDownloadResponse = await fetch(
-    `${video.media!.url}&key=${process.env.GEMINI_API_KEY}`
-  );
-  if (
-    !videoDownloadResponse ||
-    videoDownloadResponse.status !== 200 ||
-    !videoDownloadResponse.body
-  ) {
-    throw new Error('Failed to fetch video');
-  }
+    const videoDownloadResponse = await fetch(
+        `${video.media!.url}`
+    );
+    if (
+        !videoDownloadResponse ||
+        videoDownloadResponse.status !== 200 ||
+        !videoDownloadResponse.body
+    ) {
+        throw new Error(`Failed to fetch video. Status: ${videoDownloadResponse.status}`);
+    }
 
-  Readable.from(videoDownloadResponse.body).pipe(fs.createWriteStream(path));
+    const videoBuffer = await videoDownloadResponse.arrayBuffer();
+    const videoBase64 = Buffer.from(videoBuffer).toString('base64');
+    const contentType = video.media?.contentType || 'video/mp4';
+    return `data:${contentType};base64,${videoBase64}`;
 }
-

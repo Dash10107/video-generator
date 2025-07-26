@@ -34,7 +34,7 @@ export async function handleVideoGeneration(prevState: FormState, formData: Form
     console.error('Video generation failed:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
     return {
-      error: `Failed to generate video. Please try again.`,
+      error: `Video generation failed: ${errorMessage}`,
       video: null,
     };
   }
