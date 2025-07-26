@@ -1,7 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
-import { useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -73,7 +73,7 @@ function VideoDisplay({ videoSrc }: { videoSrc: string | null }) {
 }
 
 export function VideoGenerator() {
-  const [state, formAction] = useFormState(handleVideoGeneration, initialState);
+  const [state, formAction] = useActionState(handleVideoGeneration, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
