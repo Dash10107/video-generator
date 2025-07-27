@@ -10,6 +10,7 @@ const promptSchema = z.object({
 interface FormState {
     error: string | null;
     video: string | null;
+    audio: string | null;
 }
 
 export async function handleVideoGeneration(prevState: FormState, formData: FormData): Promise<FormState> {
@@ -21,6 +22,7 @@ export async function handleVideoGeneration(prevState: FormState, formData: Form
     return {
       error: validatedFields.error.flatten().fieldErrors.prompt?.[0] || 'Invalid prompt.',
       video: null,
+      audio: null,
     };
   }
 
@@ -29,6 +31,7 @@ export async function handleVideoGeneration(prevState: FormState, formData: Form
     return {
       error: null,
       video: result.videoDataUri,
+      audio: result.audioDataUri,
     };
   } catch (error) {
     console.error('Video generation failed:', error);
@@ -36,6 +39,7 @@ export async function handleVideoGeneration(prevState: FormState, formData: Form
     return {
       error: `Video generation failed: ${errorMessage}`,
       video: null,
+      audio: null,
     };
   }
 }

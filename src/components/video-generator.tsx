@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 const initialState = {
   error: null,
   video: null,
+  audio: null,
 };
 
 function SubmitButton() {
@@ -33,8 +34,33 @@ function SubmitButton() {
   );
 }
 
-function VideoDisplay({ videoSrc }: { videoSrc: string | null }) {
+function VideoDisplay({ videoSrc, audioSrc }: { videoSrc: string | null, audioSrc: string | null }) {
     const { pending } = useFormStatus();
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const audioRef = useRef<HTMLAudioElement>(null);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        const audio = audioRef.current;
+
+        if (video && audio && videoSrc && audioSrc) {
+            const syncAudio = () => {
+                if(audio) audio.currentTime = video.currentTime;
+            };
+            const playAudio = () => audio.play();
+            const pauseAudio = () => audio.pause();
+
+            video.addEventListener('play', playAudio);
+            video.addEventListener('pause', pauseAudio);
+            video.addEventListener('seeking', syncAudio);
+            
+            return () => {
+                video.removeEventListener('play', playAudio);
+                video.removeEventListener('pause', pauseAudio);
+                video.removeEventListener('seeking', syncAudio);
+            };
+        }
+    }, [videoSrc, audioSrc]);
 
     if (!pending && !videoSrc) {
         return null;
@@ -56,15 +82,16 @@ function VideoDisplay({ videoSrc }: { videoSrc: string | null }) {
                 ) : videoSrc && (
                     <div className="aspect-video w-full rounded-lg bg-black">
                         <video
+                            ref={videoRef}
                             key={videoSrc}
                             src={videoSrc}
                             controls
-                            autoPlay
                             loop
                             className="h-full w-full object-contain"
                         >
                             Your browser does not support the video tag.
                         </video>
+                        {audioSrc && <audio ref={audioRef} src={audioSrc} key={audioSrc} loop />}
                     </div>
                 )}
             </CardContent>
@@ -76,7 +103,7 @@ export function VideoGenerator() {
   const [state, formAction] = useActionState(handleVideoGeneration, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
-  const [videoSrc, setVideoSrc] = useState<string | null>(null);
+  const [mediaSrc, setMediaSrc] = useState<{video: string | null, audio: string | null}>({ video: null, audio: null });
 
   useEffect(() => {
     if (state.error) {
@@ -85,16 +112,16 @@ export function VideoGenerator() {
         title: "Generation Failed",
         description: state.error,
       });
-      setVideoSrc(null);
+      setMediaSrc({ video: null, audio: null });
     }
     if (state.video) {
-      setVideoSrc(state.video);
-      formRef.current?.reset();
+        setMediaSrc({ video: state.video, audio: state.audio });
+        formRef.current?.reset();
     }
   }, [state, toast]);
   
   const handleFormActionWrapper = (formData: FormData) => {
-    setVideoSrc(null);
+    setMediaSrc({ video: null, audio: null });
     formAction(formData);
   };
 
@@ -116,7 +143,7 @@ export function VideoGenerator() {
                 </div>
             </CardContent>
         </Card>
-        <VideoDisplay videoSrc={videoSrc} />
+        <VideoDisplay videoSrc={mediaSrc.video} audioSrc={mediaSrc.audio} />
       </form>
     </div>
   );
