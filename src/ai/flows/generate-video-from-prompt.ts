@@ -40,7 +40,7 @@ const generateVideoFromPromptFlow = ai.defineFlow(
     for (let i = 0; i < MAX_RETRIES; i++) {
         try {
             if (i > 0) {
-                streamingCallback({
+                streamingCallback?.({
                     index: i,
                     step: 'retry',
                     retryCount: i,
@@ -61,7 +61,7 @@ const generateVideoFromPromptFlow = ai.defineFlow(
                 throw new Error('Expected the model to return an operation');
             }
             
-            streamingCallback({
+            streamingCallback?.({
                 index: i,
                 step: 'polling',
             });
@@ -82,7 +82,7 @@ const generateVideoFromPromptFlow = ai.defineFlow(
                 throw new Error('Failed to find the generated video');
             }
             
-            streamingCallback({
+            streamingCallback?.({
                 index: i,
                 step: 'downloading',
             });
@@ -102,7 +102,7 @@ async function convertVideoToDataUri(video: MediaPart): Promise<string> {
     const fetch = (await import('node-fetch')).default;
     // Add API key before fetching the video.
     const videoDownloadResponse = await fetch(
-        `${video.media!.url}`
+        `${video.media!.url}&key=${process.env.GEMINI_API_KEY}`
     );
     if (
         !videoDownloadResponse ||
