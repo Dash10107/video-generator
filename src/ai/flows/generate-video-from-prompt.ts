@@ -32,19 +32,10 @@ export async function generateVideoFromPrompt(input: GenerateVideoFromPromptInpu
   return generateVideoFromPromptFlow(input);
 }
 
-async function generateVideo(prompt: string, streamingCallback?: (chunk: any) => void) {
+async function generateVideo(prompt: string) {
     let lastError: Error | null = null;
     for (let i = 0; i < MAX_RETRIES; i++) {
         try {
-            if (i > 0) {
-                streamingCallback?.({
-                    index: i,
-                    step: 'retry',
-                    retryCount: i,
-                    totalRetries: MAX_RETRIES,
-                });
-            }
-
             let { operation } = await ai.generate({
                 model: googleAI.model('veo-2.0-generate-001'),
                 prompt: prompt,
@@ -58,11 +49,6 @@ async function generateVideo(prompt: string, streamingCallback?: (chunk: any) =>
                 throw new Error('Expected the model to return an operation');
             }
             
-            streamingCallback?.({
-                index: i,
-                step: 'polling',
-            });
-
             while (!operation.done) {
                 operation = await ai.checkOperation(operation);
                 await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -77,10 +63,6 @@ async function generateVideo(prompt: string, streamingCallback?: (chunk: any) =>
                 throw new Error('Failed to find the generated video');
             }
             
-            streamingCallback?.({
-                index: i,
-                step: 'downloading',
-            });
             return await convertVideoToDataUri(video);
         } catch (error) {
             lastError = error instanceof Error ? error : new Error(String(error));
@@ -120,9 +102,9 @@ const generateVideoFromPromptFlow = ai.defineFlow(
     inputSchema: GenerateVideoFromPromptInputSchema,
     outputSchema: GenerateVideoFromPromptOutputSchema,
   },
-  async (input, streamingCallback) => {
+  async (input) => {
     const [videoResult, audioResult] = await Promise.allSettled([
-        generateVideo(input.prompt, streamingCallback),
+        generateVideo(input.prompt),
         generateAudio(input.prompt)
     ]);
 
