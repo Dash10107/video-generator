@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { handleVideoGeneration } from "@/app/actions";
@@ -18,15 +18,15 @@ const initialState = {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} size="lg" className="w-full bg-accent hover:bg-accent/90 md:w-auto font-bold tracking-wide">
+    <Button type="submit" disabled={pending} size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90 md:w-auto font-bold tracking-wide transition-all duration-300 transform hover:scale-105">
       {pending ? (
         <>
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          Generating...
+          Crafting your vision...
         </>
       ) : (
         <>
-          <Sparkles className="mr-2 h-5 w-5" />
+          <Wand2 className="mr-2 h-5 w-5" />
           Generate Video
         </>
       )}
@@ -67,8 +67,8 @@ function VideoDisplay({ videoSrc, audioSrc }: { videoSrc: string | null, audioSr
     }
 
     return (
-        <Card className="mt-8 shadow-lg overflow-hidden">
-            <CardContent className="p-4 sm:p-6">
+        <Card className="mt-8 shadow-lg overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm">
+            <CardContent className="p-2 sm:p-4">
                 {pending ? (
                     <div className="flex flex-col items-center justify-center space-y-4 py-8 aspect-video">
                         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -80,7 +80,7 @@ function VideoDisplay({ videoSrc, audioSrc }: { videoSrc: string | null, audioSr
                         </p>
                     </div>
                 ) : videoSrc && (
-                    <div className="aspect-video w-full rounded-lg bg-black">
+                    <div className="aspect-video w-full rounded-lg bg-black/50">
                         <video
                             ref={videoRef}
                             key={videoSrc}
@@ -126,15 +126,15 @@ export function VideoGenerator() {
   };
 
   return (
-    <div className="mt-8 w-full max-w-3xl">
+    <div className="w-full max-w-3xl">
       <form ref={formRef} action={handleFormActionWrapper} className="space-y-4">
-        <Card className="shadow-lg">
-            <CardContent className="p-6">
+        <Card className="shadow-2xl border-border/50 bg-card/50 backdrop-blur-sm">
+            <CardContent className="p-4 md:p-6">
                 <div className="space-y-4">
                     <Textarea
                         name="prompt"
-                        placeholder="e.g., A majestic lion roaring on a rocky outcrop at sunset..."
-                        className="min-h-[100px] resize-none text-base focus:ring-accent"
+                        placeholder="e.g., An astronaut discovering a glowing forest on a distant moon..."
+                        className="min-h-[120px] resize-none text-base bg-background/70 focus:ring-accent"
                         required
                     />
                     <div className="flex justify-end">
