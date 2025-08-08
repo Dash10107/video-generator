@@ -2,7 +2,6 @@
 
 VeoVerse is a cutting-edge web application that brings your ideas to life by transforming simple text prompts into dynamic, engaging videos complete with synchronized audio. Built with a modern, AI-first technology stack, this project serves as a powerful demonstration of generative AI's creative potential.
 
-![VeoVerse Screenshot](https://placehold.co/800x400.png?text=VeoVerse+UI)
 
 ## ✨ Features
 
@@ -28,8 +27,8 @@ To get this project running locally, follow these steps:
 
 1.  **Clone the repository:**
     ```bash
-    git clone <your-repository-url>
-    cd <repository-directory>
+    git clone https://github.com/Dash10107/video-generator/
+    cd video-generator
     ```
 
 2.  **Install dependencies:**
